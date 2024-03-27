@@ -1,11 +1,33 @@
+"use client";
 import Image from "next/image";
 import { SettingsIcon } from "lucide-react";
+import Messages from "@/components/Messages";
+import Recorder, { mimeType } from "@/components/Recorder";
+import { useRef } from "react";
 
 export default function Home() {
-  return (
-    <main className="">
-      <h1>Let's</h1>
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const submitRef = useRef<HTMLButtonElement | null>(null);
 
+  const uploadAudio = (blob: Blob) => {
+    const url = URL.createObjectURL(blob);
+    const file = new File([blob], "audio.webm", { type: mimeType });
+
+    // 숨김 파일 입력
+    if (fileRef.current) {
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      fileRef.current.files = dataTransfer.files;
+
+      // 클릭 후 제출
+      if (submitRef.current) {
+        submitRef.current.click();
+      }
+    }
+  };
+
+  return (
+    <main className="bg-black h-screen overflow-y-auto">
       {/* Header */}
       <header className="flex justify-between fixed top-0 text-white w-full p-5">
         <Image
@@ -23,12 +45,20 @@ export default function Home() {
       </header>
 
       {/* Form */}
-      <form>
-        <div></div>
+      <form className="flex flex-col bg-black">
+        <div className="flex-1 bg-gradient-to-b from-slate-100 to-black">
+          <Messages></Messages>
+        </div>
 
-        <input type="file" hidden></input>
+        <input type="file" name="audio" hidden ref={fileRef}></input>
 
-        <button type="submit" hidden></button>
+        <button type="submit" hidden ref={submitRef}></button>
+
+        <div className="fixed bottom-0 w-full overflow-hidden bg-black rounded-t-3xl">
+          <Recorder uploadAudio={uploadAudio}></Recorder>
+
+          <div></div>
+        </div>
       </form>
     </main>
   );
