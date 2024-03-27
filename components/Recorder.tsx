@@ -18,6 +18,7 @@ export default function Recorder({
   const [permission, setPermission] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [recordingStatus, setRecordingStatus] = useState("inactive");
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
 
   useEffect(() => {
     getMicrophonePermission();
@@ -48,6 +49,30 @@ export default function Recorder({
     const media = new MediaRecorder(stream, { mimeType });
     mediaRecorder.current = media;
     mediaRecorder.current.start();
+
+    let localAudioChunks: Blob[] = [];
+    mediaRecorder.current.ondataavailable = (event) => {
+      if (typeof event.data === "undefined") return;
+      if (event.data.size === 0) return;
+
+      localAudioChunks.push(event.data);
+    };
+
+    setAudioChunks(localAudioChunks);
+  };
+
+  //   Recording 멈추기
+  const stopRecording = async () => {
+    if (mediaRecorder.current === null || pending) return;
+
+    setRecordingStatus("inactive");
+    mediaRecorder.current.stop();
+    mediaRecorder.current.onstop = () => {
+      const audioBlob = new Blob(audioChunks, { type: mimeType });
+      //   const audioUrl = URL.createObjectURL(audioBlob);
+      uploadAudio(audioBlob);
+      setAudioChunks([]);
+    };
   };
 
   return (
@@ -56,13 +81,40 @@ export default function Recorder({
         <button onClick={getMicrophonePermission}>Get Microphone</button>
       )}
 
-      <Image
-        src={activeAssistantIcon}
-        width={350}
-        height={350}
-        priority
-        alt="Recording"
-      ></Image>
+      {pending && (
+        <Image
+          src={activeAssistantIcon}
+          width={350}
+          height={350}
+          priority
+          alt="Recording"
+          className="assistant grayscale"
+        ></Image>
+      )}
+
+      {permission && recordingStatus === "inactive" && !pending && (
+        <Image
+          src={notactiveAssistantIcon}
+          alt="Not Recording"
+          width={350}
+          height={350}
+          onClick={startRecording}
+          priority={true}
+          className="assistant cursor-pointer hover:scale-110 duration-150 transition-all ease-in-out"
+        ></Image>
+      )}
+
+      {/* Recording 멈추기 */}
+      {recordingStatus === "recording" && (
+        <Image
+          src={activeAssistantIcon}
+          width={350}
+          height={350}
+          priority
+          alt="Recording"
+          className="assistant grayscale"
+        ></Image>
+      )}
     </div>
   );
 }

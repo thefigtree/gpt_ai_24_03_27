@@ -10,7 +10,7 @@ export default function Home() {
   const submitRef = useRef<HTMLButtonElement | null>(null);
 
   const uploadAudio = (blob: Blob) => {
-    const url = URL.createObjectURL(blob);
+    // const url = URL.createObjectURL(blob);
     const file = new File([blob], "audio.webm", { type: mimeType });
 
     // 숨김 파일 입력
