@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import activeAssistantIcon from "@/public/Img/active.gif";
-import notactiveAssistantIcon from "@/public/Img/notactive.png";
 import { useEffect, useRef, useState } from "react";
+import activeAssistantIcon from "../public/Img/active.gif";
+import notActiveAssistantIcon from "../public/Img/notactive.png";
 import { useFormStatus } from "react-dom";
 
 export const mimeType = "audio/webm";
@@ -19,6 +19,7 @@ export default function Recorder({
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [recordingStatus, setRecordingStatus] = useState("inactive");
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const [audio, setAudio] = useState<string | null>(null);
 
   useEffect(() => {
     getMicrophonePermission();
@@ -33,88 +34,96 @@ export default function Recorder({
         });
         setPermission(true);
         setStream(streamData);
-      } catch (error) {
-        console.log("error");
+      } catch (err: any) {
+        alert(err.message);
       }
     } else {
-      alert("Your browser does not support the MediaRecorder API");
+      alert("The MediaRecorder API is not supported in your browser.");
     }
   };
 
   const startRecording = async () => {
-    if (stream === null || pending) return;
+    if (mediaRecorder === null || stream === null) return;
+
+    if (pending) return;
+
     setRecordingStatus("recording");
-
-    //Recorder 대신
-    const media = new MediaRecorder(stream, { mimeType });
+    //create new Media recorder instance using the stream
+    const media = new MediaRecorder(stream, { mimeType: mimeType });
+    //set the MediaRecorder instance to the mediaRecorder ref
     mediaRecorder.current = media;
+    //invokes the start method to start the recording process
     mediaRecorder.current.start();
-
     let localAudioChunks: Blob[] = [];
     mediaRecorder.current.ondataavailable = (event) => {
       if (typeof event.data === "undefined") return;
       if (event.data.size === 0) return;
-
       localAudioChunks.push(event.data);
     };
-
     setAudioChunks(localAudioChunks);
   };
 
-  //   Recording 멈추기
-  const stopRecording = async () => {
-    if (mediaRecorder.current === null || pending) return;
+  const stopRecording = () => {
+    if (mediaRecorder.current === null) return;
+
+    if (pending) return;
 
     setRecordingStatus("inactive");
+    //stops the recording instance
     mediaRecorder.current.stop();
     mediaRecorder.current.onstop = () => {
+      //creates a blob file from the audiochunks data
       const audioBlob = new Blob(audioChunks, { type: mimeType });
-      //   const audioUrl = URL.createObjectURL(audioBlob);
+      //creates a playable URL from the blob file.
+      const audioUrl = URL.createObjectURL(audioBlob);
+      setAudio(audioUrl);
       uploadAudio(audioBlob);
       setAudioChunks([]);
     };
   };
 
   return (
-    <div className="flex items-center justify-center text-white">
-      {!permission && (
-        <button onClick={getMicrophonePermission}>Get Microphone</button>
-      )}
+    <div className="flex items-center justify-center">
+      {!permission ? (
+        <button onClick={getMicrophonePermission} type="button">
+          Get Microphone
+        </button>
+      ) : null}
 
       {pending && (
         <Image
           src={activeAssistantIcon}
+          alt="Recording"
           width={350}
           height={350}
-          priority
-          alt="Recording"
+          onClick={stopRecording}
+          priority={true}
           className="assistant grayscale"
-        ></Image>
+        />
       )}
 
-      {permission && recordingStatus === "inactive" && !pending && (
+      {permission && recordingStatus === "inactive" && !pending ? (
         <Image
-          src={notactiveAssistantIcon}
+          src={notActiveAssistantIcon}
           alt="Not Recording"
           width={350}
           height={350}
           onClick={startRecording}
           priority={true}
           className="assistant cursor-pointer hover:scale-110 duration-150 transition-all ease-in-out"
-        ></Image>
-      )}
-
-      {/* Recording 멈추기 */}
-      {recordingStatus === "recording" && (
+        />
+      ) : null}
+      {recordingStatus === "recording" ? (
         <Image
           src={activeAssistantIcon}
+          alt="Recording"
           width={350}
           height={350}
-          priority
-          alt="Recording"
-          className="assistant grayscale"
-        ></Image>
-      )}
+          onClick={stopRecording}
+          priority={true}
+          className="assistant cursor-pointer hover:scale-110 duration-150 transition-all ease-in-out"
+        />
+      ) : null}
     </div>
   );
 }
